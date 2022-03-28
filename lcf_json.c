@@ -4,6 +4,8 @@
 
 #include "lcf_json.h"
 #include <assert.h> /* assert() */
+#include <errno.h>  /* errno, ERANGE */
+#include <math.h>   /* HUGE_VAL */
 #include <stdlib.h> /* NULL, strtod() */
 
 #define EXPECT(ctx, ch)                                                                            \
@@ -31,48 +33,63 @@ lj_parse_whitespace(lj_context_t *ctx) {
 }
 
 static int
-lj_parse_null(lj_context_t *ctx, lj_value_t *val) {
-    EXPECT(ctx, 'n');
-    if (ctx->json[0] != 'u' || ctx->json[1] != 'l' || ctx->json[2] != 'l') {
-        return LJ_PARSE_INVALID_VALUE;
+lj_parse_literal(lj_context_t *ctx, lj_value_t *val, const char *literal, lj_type_t type) {
+    EXPECT(ctx, literal[0]);
+    size_t i;
+    for (i = 0; literal[i + 1]; i++) {
+        if (ctx->json[i] != literal[i + 1]) {
+            return LJ_PARSE_INVALID_VALUE;
+        }
     }
-    ctx->json += 3;
-    val->type = LJ_NULL;
-    return LJ_PARSE_OK;
-}
-
-static int
-lj_parse_true(lj_context_t *ctx, lj_value_t *val) {
-    EXPECT(ctx, 't');
-    if (ctx->json[0] != 'r' || ctx->json[1] != 'u' || ctx->json[2] != 'e') {
-        return LJ_PARSE_INVALID_VALUE;
-    }
-    ctx->json += 3;
-    val->type = LJ_TRUE;
-    return LJ_PARSE_OK;
-}
-
-static int
-lj_parse_false(lj_context_t *ctx, lj_value_t *val) {
-    EXPECT(ctx, 'f');
-    if (ctx->json[0] != 'a' || ctx->json[1] != 'l' || ctx->json[2] != 's' || ctx->json[3] != 'e') {
-        return LJ_PARSE_INVALID_VALUE;
-    }
-    ctx->json += 4;
-    val->type = LJ_FALSE;
+    ctx->json += i;
+    val->type = type;
     return LJ_PARSE_OK;
 }
 
 static int
 lj_parse_number(lj_context_t *ctx, lj_value_t *val) {
-    char *end;
-    val->n = strtod(ctx->json, &end);
-
-    if (ctx->json == end) {
-        return LJ_PARSE_INVALID_VALUE;
+    const char *p = ctx->json;
+    if (*p == '-') {
+        p++;
     }
-    ctx->json = end;
+    if (*p == '0') {
+        p++;
+    } else {
+        if (!IS_NON_ZERO_DIGIT(*p)) {
+            return LJ_PARSE_INVALID_VALUE;
+        }
+        do {
+            p++;
+        } while (IS_DECIMAL_DIGIT(*p));
+    }
+    if (*p == '.') {
+        p++;
+        if (!IS_DECIMAL_DIGIT(*p)) {
+            return LJ_PARSE_INVALID_VALUE;
+        }
+        do {
+            p++;
+        } while (IS_DECIMAL_DIGIT(*p));
+    }
+    if (*p == 'e' || *p == 'E') {
+        p++;
+        if (*p == '+' || *p == '-') {
+            p++;
+        }
+        if (!IS_DECIMAL_DIGIT(*p)) {
+            return LJ_PARSE_INVALID_VALUE;
+        }
+        do {
+            p++;
+        } while (IS_DECIMAL_DIGIT(*p));
+    }
+    errno  = 0;
+    val->n = strtod(ctx->json, NULL);
+    if (errno == ERANGE && (val->n == HUGE_VAL || val->n == -HUGE_VAL)) {
+        return LJ_PARSE_NUMBER_TOO_BIG;
+    }
     val->type = LJ_NUMBER;
+    ctx->json = p;
     return LJ_PARSE_OK;
 }
 
@@ -80,15 +97,15 @@ static int
 lj_parse_value(lj_context_t *ctx, lj_value_t *val) {
     switch (*ctx->json) {
         case 'n':
-            return lj_parse_null(ctx, val);
+            return lj_parse_literal(ctx, val, "null", LJ_NULL);
         case 't':
-            return lj_parse_true(ctx, val);
+            return lj_parse_literal(ctx, val, "true", LJ_TRUE);
         case 'f':
-            return lj_parse_false(ctx, val);
-        case '\0':
-            return LJ_PARSE_EXPECT_VALUE;
+            return lj_parse_literal(ctx, val, "false", LJ_FALSE);
         default:
             return lj_parse_number(ctx, val);
+        case '\0':
+            return LJ_PARSE_EXPECT_VALUE;
     }
 }
 
