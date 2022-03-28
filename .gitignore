@@ -164,6 +164,7 @@ tags
 *.tmlanguage.cache
 *.tmPreferences.cache
 *.stTheme.cache
+.cache/
 
 # Workspace files are user-specific
 *.sublime-workspace
