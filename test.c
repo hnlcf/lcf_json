@@ -18,7 +18,7 @@ static int test_pass  = 0;
             test_pass++;                                                                           \
         else {                                                                                     \
             fprintf(stderr,                                                                        \
-                    "%s:%d: expect: " format " actual: " format "\n",                              \
+                    "%data:%d: expect: " format " actual: " format "\n",                           \
                     __FILE__,                                                                      \
                     __LINE__,                                                                      \
                     expect,                                                                        \
@@ -30,6 +30,17 @@ static int test_pass  = 0;
 #define EXPECT_EQ_INT(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%d")
 
 #define EXPECT_EQ_DOUBLE(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%lf")
+
+#define EXPECT_EQ_STRING(expect_str, actual_str, actual_len)                                       \
+    EXPECT_EQ_BASE(sizeof(expect_str) - 1 == (actual_len) &&                                       \
+                           memcmp(expect_str, actual_str, actual_len) == 0,                        \
+                   expect_str,                                                                     \
+                   actual_str,                                                                     \
+                   "%s")
+
+#define EXPECT_EQ_TRUE(actual) EXPECT_EQ_BASE((actual) != 0, "true", "false", "%s")
+
+#define EXPECT_EQ_FALSE(actual) EXPECT_EQ_BASE((actual) == 0, "false", "true", "%s")
 
 #define TEST_ERROR(error, json)                                                                    \
     do {                                                                                           \
@@ -157,6 +168,23 @@ test_parse_number_too_big() {
 }
 
 static void
+test_access_string() {
+    lj_value_t  v;
+    lj_string_t str;
+    lj_init(&v);
+
+    lj_set_string(&v, "", 0);
+    str = lj_get_string(&v);
+    EXPECT_EQ_STRING("", str.data, str.len);
+
+    lj_set_string(&v, "Hello", 5);
+    str = lj_get_string(&v);
+    EXPECT_EQ_STRING("Hello", str.data, str.len);
+
+    lj_free(&v);
+}
+
+static void
 test_parse() {
     test_parse_null();
     test_parse_true();
@@ -166,11 +194,13 @@ test_parse() {
     test_parse_invalid_value();
     test_parse_root_not_singular();
     test_parse_number_too_big();
+    test_access_string();
 }
 
 int
 main() {
     test_parse();
     printf("%d/%d (%3.2f%%) passed\n", test_pass, test_count, test_pass * 100.0 / test_count);
+    printf("%d %d %d\n", sizeof(double), sizeof(char *), sizeof(size_t));
     return main_ret;
 }
