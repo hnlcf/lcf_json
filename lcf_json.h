@@ -2,8 +2,8 @@
 // Created by nim on 2022/3/26.
 //
 
-#ifndef INCLUDE_LCF_JSON_H
-#define INCLUDE_LCF_JSON_H
+#ifndef LCF_JSON_H_INCLUDE
+#define LCF_JSON_H_INCLUDE
 
 #include <stddef.h>
 
@@ -88,4 +88,4 @@ void lj_set_number(const lj_value_t *val, double n);
 
 void lj_set_string(lj_value_t *val, const char *str, size_t len);
 
-#endif  // INCLUDE_LCF_JSON_H
+#endif  // LCF_JSON_H_INCLUDE
