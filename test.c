@@ -18,7 +18,7 @@ static int test_pass  = 0;
             test_pass++;                                                                           \
         else {                                                                                     \
             fprintf(stderr,                                                                        \
-                    "%data:%d: expect: " format " actual: " format "\n",                           \
+                    "%s:%d: expect: " format " actual: " format "\n",                              \
                     __FILE__,                                                                      \
                     __LINE__,                                                                      \
                     expect,                                                                        \
@@ -201,6 +201,5 @@ int
 main() {
     test_parse();
     printf("%d/%d (%3.2f%%) passed\n", test_pass, test_count, test_pass * 100.0 / test_count);
-    printf("%d %d %d\n", sizeof(double), sizeof(char *), sizeof(size_t));
     return main_ret;
 }
