@@ -6,6 +6,7 @@
 #define LCF_JSON_H_INCLUDE
 
 #include <stddef.h>
+#include <stdint.h>
 
 #define lj_memcpy(dst, src, len)                                                                   \
     do {                                                                                           \
@@ -59,7 +60,7 @@ struct lcf_json_value_s {
 
 struct lcf_json_context_s {
     const char *json;
-    char *      stack;
+    char       *stack;
     size_t      size;
     size_t      top;
 };
